@@ -67,3 +67,10 @@ body {
   button:hover {
     background: #115293;
   }
+  .errors {
+    background: #ffe0e0;
+    color: #900;
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 3px;
+  }

@@ -97,11 +97,11 @@ $employees = $stmt->get_result();
             </div>
             <div class="row">
                 <label>Паспорт (серия/номер):</label>
-                <input type="text" name="passport" required>
+                <input type="text" name="passport" id="passport" required>
             </div>
             <div class="row">
                 <label>Телефон:</label>
-                <input type="tel" name="phone" required>
+                <input type="tel" name="phone" id="phone" required placeholder="8XXXXXXXXXX">
             </div>
             <div class="row">
                 <label>Адрес:</label>
@@ -164,5 +164,19 @@ $employees = $stmt->get_result();
         </tbody>
     </table>
 </div>
+<script>
+const phoneInput = document.getElementById('phone');
+if (phoneInput) {
+    phoneInput.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 11);
+    });
+}
+const passportInput = document.getElementById('passport');
+if (passportInput) {
+    passportInput.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 10);
+    });
+}
+</script>
 </body>
 </html>
