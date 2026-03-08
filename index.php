@@ -16,7 +16,54 @@ $employees = $stmt->get_result();
 <body>
 <div class="container">
     <h1>Учет сотрудников</h1>
-
+    <div class="form-block">
+        <h2>Новый сотрудник</h2>
+        <form method="post">
+            <input type="hidden" name="action" value="save">
+            <div class="row">
+                <label>ФИО:</label>
+                <input type="text" name="full_name" required>
+            </div>
+            <div class="row">
+                <label>Дата рождения:</label>
+                <input type="date" name="birth_date" required>
+            </div>
+            <div class="row">
+                <label>Паспорт (серия/номер):</label>
+                <input type="text" name="passport" required>
+            </div>
+            <div class="row">
+                <label>Телефон:</label>
+                <input type="tel" name="phone" required>
+            </div>
+            <div class="row">
+                <label>Адрес:</label>
+                <input type="text" name="address" required>
+            </div>
+            <div class="row">
+                <label>Отдел:</label>
+                <select name="department" required>
+                    <option value="">Выберите отдел</option>
+                    <option value="IT">IT</option>
+                    <option value="Бухгалтерия">Бухгалтерия</option>
+                    <option value="Отдел продаж">Отдел продаж</option>
+                </select>
+            </div>
+            <div class="row">
+                <label>Должность:</label>
+                <input type="text" name="position" required>
+            </div>
+            <div class="row">
+                <label>Зарплата:</label>
+                <input type="text" name="salary" required>
+            </div>
+            <div class="row">
+                <label>Дата принятия:</label>
+                <input type="date" name="hire_date" required>
+            </div>
+            <button type="submit">Сохранить</button>
+        </form>
+    </div>
     <h2>Список сотрудников</h2>
     <table>
         <thead>
