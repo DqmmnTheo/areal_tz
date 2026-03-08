@@ -2,6 +2,7 @@
 require_once 'db.php';
 
 $errors = [];
+$departments = ['IT', 'Бухгалтерия', 'Отдел продаж'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -16,10 +17,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $salary     = trim($_POST['salary'] ?? '');
         $hire_date  = $_POST['hire_date'] ?? '';
 
-        if (
-            $full_name === '' || $birth_date === '' || $passport === '' || $phone === '' ||
-            $address === '' || $department === '' || $position === '' || $salary === '' || $hire_date === ''
-        ) {
+        if ($full_name === '' || $birth_date === '' || $passport === '' || $phone === '' ||
+            $address === '' || $department === '' || $position === '' || $salary === '' || $hire_date === '') {
             $errors[] = 'Все поля обязательны для заполнения.';
         } else {
             if (!is_numeric($salary)) {
@@ -29,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors[] = 'Паспорт должен содержать 10 цифр (4 серии и 6 номера).';
             }
             if (!preg_match('/^[78]\d{10}$/', $phone)) {
-                $errors[] = 'Телефон должен быть в формате 8XXXXXXXXXX или 7XXXXXXXXXX.';
+                $errors[] = 'Телефон должен быть в формате 8XXXXXXXXXX.';
             }
         }
 
@@ -38,21 +37,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'INSERT INTO employees (full_name, birth_date, passport, phone, address, department, position, salary, hire_date)
                  VALUES (?,?,?,?,?,?,?,?,?)'
             );
-            $stmt->bind_param(
-                'sssssssss',
-                $full_name,
-                $birth_date,
-                $passport,
-                $phone,
-                $address,
-                $department,
-                $position,
-                $salary,
-                $hire_date
-            );
+            $stmt->bind_param('sssssssss', $full_name, $birth_date, $passport, $phone, $address, $department, $position, $salary, $hire_date);
             $stmt->execute();
             $stmt->close();
-
             header('Location: index.php');
             exit;
         }
@@ -70,8 +57,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$sql = 'SELECT * FROM employees ORDER BY full_name';
+$filter_department = trim($_GET['filter_department'] ?? '');
+$filter_position   = trim($_GET['filter_position'] ?? '');
+$search_name       = trim($_GET['search_name'] ?? '');
+
+$where  = [];
+$params = [];
+$types  = '';
+
+if ($filter_department !== '') {
+    $where[]  = 'department = ?';
+    $params[] = $filter_department;
+    $types   .= 's';
+}
+if ($filter_position !== '') {
+    $where[]  = 'position = ?';
+    $params[] = $filter_position;
+    $types   .= 's';
+}
+if ($search_name !== '') {
+    $where[]  = 'full_name LIKE ?';
+    $params[] = '%' . $search_name . '%';
+    $types   .= 's';
+}
+
+$sql = 'SELECT * FROM employees';
+if (!empty($where)) {
+    $sql .= ' WHERE ' . implode(' AND ', $where);
+}
+$sql .= ' ORDER BY full_name';
+
 $stmt = $conn->prepare($sql);
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
+}
 $stmt->execute();
 $employees = $stmt->get_result();
 ?>
@@ -93,6 +112,30 @@ $employees = $stmt->get_result();
             <?php endforeach; ?>
         </div>
     <?php endif; ?>
+
+    <div class="filters">
+        <form method="get">
+            <div>
+                <label>Отдел:</label>
+                <select name="filter_department">
+                    <option value="">Все</option>
+                    <?php foreach ($departments as $dep): ?>
+                        <option value="<?php echo htmlspecialchars($dep); ?>" <?php echo $filter_department === $dep ? 'selected' : ''; ?>><?php echo htmlspecialchars($dep); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div>
+                <label>Должность:</label>
+                <input type="text" name="filter_position" value="<?php echo htmlspecialchars($filter_position); ?>">
+            </div>
+            <div>
+                <label>Поиск по ФИО:</label>
+                <input type="text" name="search_name" value="<?php echo htmlspecialchars($search_name); ?>">
+            </div>
+            <button type="submit">Фильтровать</button>
+            <a href="index.php" class="reset-link">Сбросить</a>
+        </form>
+    </div>
 
     <div class="form-block">
         <h2>Новый сотрудник</h2>
@@ -122,9 +165,9 @@ $employees = $stmt->get_result();
                 <label>Отдел:</label>
                 <select name="department" required>
                     <option value="">Выберите отдел</option>
-                    <option value="IT">IT</option>
-                    <option value="Бухгалтерия">Бухгалтерия</option>
-                    <option value="Отдел продаж">Отдел продаж</option>
+                    <?php foreach ($departments as $dep): ?>
+                        <option value="<?php echo htmlspecialchars($dep); ?>"><?php echo htmlspecialchars($dep); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="row">
@@ -162,7 +205,7 @@ $employees = $stmt->get_result();
         </thead>
         <tbody>
         <?php while ($row = $employees->fetch_assoc()): ?>
-            <<tr class="<?php echo (int)$row['is_fired'] === 1 ? 'fired' : ''; ?>">
+            <tr class="<?php echo (int)$row['is_fired'] === 1 ? 'fired' : ''; ?>">
                 <td><?php echo htmlspecialchars($row['full_name']); ?></td>
                 <td><?php echo htmlspecialchars($row['birth_date']); ?></td>
                 <td><?php echo htmlspecialchars($row['passport']); ?></td>
@@ -172,13 +215,7 @@ $employees = $stmt->get_result();
                 <td><?php echo htmlspecialchars($row['position']); ?></td>
                 <td><?php echo htmlspecialchars($row['salary']); ?></td>
                 <td><?php echo htmlspecialchars($row['hire_date']); ?></td>
-                <td>
-                    <?php if ((int)$row['is_fired'] === 1): ?>
-                        Уволен
-                    <?php else: ?>
-                        Работает
-                    <?php endif; ?>
-                </td>
+                <td><?php echo (int)$row['is_fired'] === 1 ? 'Уволен' : 'Работает'; ?></td>
                 <td>
                     <?php if ((int)$row['is_fired'] === 0): ?>
                         <form method="post" style="display:inline;">
@@ -194,18 +231,10 @@ $employees = $stmt->get_result();
     </table>
 </div>
 <script>
-const phoneInput = document.getElementById('phone');
-if (phoneInput) {
-    phoneInput.addEventListener('input', function () {
-        this.value = this.value.replace(/\D/g, '').slice(0, 11);
-    });
-}
-const passportInput = document.getElementById('passport');
-if (passportInput) {
-    passportInput.addEventListener('input', function () {
-        this.value = this.value.replace(/\D/g, '').slice(0, 10);
-    });
-}
+var phoneInput = document.getElementById('phone');
+if (phoneInput) phoneInput.addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 11); });
+var passportInput = document.getElementById('passport');
+if (passportInput) passportInput.addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 10); });
 </script>
 </body>
 </html>

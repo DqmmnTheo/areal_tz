@@ -77,3 +77,30 @@ body {
   tr.fired {
   background: #ffe6e6;
 }
+.filters form,
+.form-block form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+.filters form {
+  justify-content: flex-start;
+}
+.filters div {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+}
+.reset-link {
+  font-size: 13px;
+  color: #1976d2;
+  text-decoration: none;
+}
+.reset-link:hover {
+  text-decoration: underline;
+}
+.filters select,
+.filters input[type="text"] {
+  height: 30px;
+}
