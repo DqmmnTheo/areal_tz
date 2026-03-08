@@ -56,6 +56,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: index.php');
             exit;
         }
+    } elseif ($action === 'fire') {
+        $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+        if ($id > 0) {
+            $today = date('Y-m-d');
+            $stmt = $conn->prepare('UPDATE employees SET is_fired = 1, fired_at = ? WHERE id = ?');
+            $stmt->bind_param('si', $today, $id);
+            $stmt->execute();
+            $stmt->close();
+            header('Location: index.php');
+            exit;
+        }
     }
 }
 
@@ -145,6 +156,8 @@ $employees = $stmt->get_result();
             <th>Должность</th>
             <th>Зарплата</th>
             <th>Дата принятия</th>
+            <th>Статус</th>
+            <th>Действия</th>
         </tr>
         </thead>
         <tbody>
@@ -159,6 +172,22 @@ $employees = $stmt->get_result();
                 <td><?php echo htmlspecialchars($row['position']); ?></td>
                 <td><?php echo htmlspecialchars($row['salary']); ?></td>
                 <td><?php echo htmlspecialchars($row['hire_date']); ?></td>
+                <td>
+                    <?php if ((int)$row['is_fired'] === 1): ?>
+                        Уволен
+                    <?php else: ?>
+                        Работает
+                    <?php endif; ?>
+                </td>
+                <td>
+                    <?php if ((int)$row['is_fired'] === 0): ?>
+                        <form method="post" style="display:inline;">
+                            <input type="hidden" name="action" value="fire">
+                            <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
+                            <button type="submit">Уволить</button>
+                        </form>
+                    <?php endif; ?>
+                </td>
             </tr>
         <?php endwhile; ?>
         </tbody>
