@@ -93,6 +93,23 @@ if (!empty($params)) {
 }
 $stmt->execute();
 $employees = $stmt->get_result();
+
+$is_post_save = $_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'save');
+$form_data = [
+    'full_name' => '', 'birth_date' => '', 'passport' => '', 'phone' => '', 'address' => '',
+    'department' => '', 'position' => '', 'salary' => '', 'hire_date' => '',
+];
+if ($is_post_save && !empty($errors)) {
+    $form_data['full_name']  = trim($_POST['full_name'] ?? '');
+    $form_data['birth_date'] = $_POST['birth_date'] ?? '';
+    $form_data['passport']   = trim($_POST['passport'] ?? '');
+    $form_data['phone']      = trim($_POST['phone'] ?? '');
+    $form_data['address']    = trim($_POST['address'] ?? '');
+    $form_data['department'] = trim($_POST['department'] ?? '');
+    $form_data['position']   = trim($_POST['position'] ?? '');
+    $form_data['salary']     = trim($_POST['salary'] ?? '');
+    $form_data['hire_date']  = $_POST['hire_date'] ?? '';
+}
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -106,11 +123,14 @@ $employees = $stmt->get_result();
     <h1>Учет сотрудников</h1>
 
     <?php if (!empty($errors)): ?>
-        <div class="errors">
-            <?php foreach ($errors as $e): ?>
-                <div><?php echo htmlspecialchars($e); ?></div>
-            <?php endforeach; ?>
-        </div>
+        <details class="errors" open>
+            <summary>Ошибки заполнения формы (<?php echo count($errors); ?>)</summary>
+            <ul>
+                <?php foreach ($errors as $e): ?>
+                    <li><?php echo htmlspecialchars($e); ?></li>
+                <?php endforeach; ?>
+            </ul>
+        </details>
     <?php endif; ?>
 
     <div class="filters">
@@ -143,44 +163,44 @@ $employees = $stmt->get_result();
             <input type="hidden" name="action" value="save">
             <div class="row">
                 <label>ФИО:</label>
-                <input type="text" name="full_name" required>
+                <input type="text" name="full_name" required value="<?php echo htmlspecialchars($form_data['full_name']); ?>">
             </div>
             <div class="row">
                 <label>Дата рождения:</label>
-                <input type="date" name="birth_date" required>
+                <input type="date" name="birth_date" required value="<?php echo htmlspecialchars($form_data['birth_date']); ?>">
             </div>
             <div class="row">
                 <label>Паспорт (серия/номер):</label>
-                <input type="text" name="passport" id="passport" required>
+                <input type="text" name="passport" id="passport" required value="<?php echo htmlspecialchars($form_data['passport']); ?>">
             </div>
             <div class="row">
                 <label>Телефон:</label>
-                <input type="tel" name="phone" id="phone" required placeholder="8XXXXXXXXXX">
+                <input type="tel" name="phone" id="phone" required placeholder="8XXXXXXXXXX" value="<?php echo htmlspecialchars($form_data['phone']); ?>">
             </div>
             <div class="row">
                 <label>Адрес:</label>
-                <input type="text" name="address" required>
+                <input type="text" name="address" required value="<?php echo htmlspecialchars($form_data['address']); ?>">
             </div>
             <div class="row">
                 <label>Отдел:</label>
                 <select name="department" required>
                     <option value="">Выберите отдел</option>
                     <?php foreach ($departments as $dep): ?>
-                        <option value="<?php echo htmlspecialchars($dep); ?>"><?php echo htmlspecialchars($dep); ?></option>
+                        <option value="<?php echo htmlspecialchars($dep); ?>" <?php echo $form_data['department'] === $dep ? 'selected' : ''; ?>><?php echo htmlspecialchars($dep); ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
             <div class="row">
                 <label>Должность:</label>
-                <input type="text" name="position" required>
+                <input type="text" name="position" required value="<?php echo htmlspecialchars($form_data['position']); ?>">
             </div>
             <div class="row">
                 <label>Зарплата:</label>
-                <input type="text" name="salary" required>
+                <input type="text" name="salary" required value="<?php echo htmlspecialchars($form_data['salary']); ?>">
             </div>
             <div class="row">
                 <label>Дата принятия:</label>
-                <input type="date" name="hire_date" required>
+                <input type="date" name="hire_date" required value="<?php echo htmlspecialchars($form_data['hire_date']); ?>">
             </div>
             <button type="submit">Сохранить</button>
         </form>
