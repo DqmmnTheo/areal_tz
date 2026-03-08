@@ -74,3 +74,6 @@ body {
     margin-bottom: 10px;
     border-radius: 3px;
   }
+  tr.fired {
+  background: #ffe6e6;
+}

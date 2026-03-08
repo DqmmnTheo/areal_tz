@@ -162,7 +162,7 @@ $employees = $stmt->get_result();
         </thead>
         <tbody>
         <?php while ($row = $employees->fetch_assoc()): ?>
-            <tr>
+            <<tr class="<?php echo (int)$row['is_fired'] === 1 ? 'fired' : ''; ?>">
                 <td><?php echo htmlspecialchars($row['full_name']); ?></td>
                 <td><?php echo htmlspecialchars($row['birth_date']); ?></td>
                 <td><?php echo htmlspecialchars($row['passport']); ?></td>
