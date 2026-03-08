@@ -1,6 +1,43 @@
 <?php
 require_once 'db.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    if ($action === 'save') {
+        $full_name  = trim($_POST['full_name'] ?? '');
+        $birth_date = $_POST['birth_date'] ?? '';
+        $passport   = trim($_POST['passport'] ?? '');
+        $phone      = trim($_POST['phone'] ?? '');
+        $address    = trim($_POST['address'] ?? '');
+        $department = trim($_POST['department'] ?? '');
+        $position   = trim($_POST['position'] ?? '');
+        $salary     = trim($_POST['salary'] ?? '');
+        $hire_date  = $_POST['hire_date'] ?? '';
+
+        $stmt = $conn->prepare(
+            'INSERT INTO employees (full_name, birth_date, passport, phone, address, department, position, salary, hire_date)
+             VALUES (?,?,?,?,?,?,?,?,?)'
+        );
+        $stmt->bind_param(
+            'sssssssss',
+            $full_name,
+            $birth_date,
+            $passport,
+            $phone,
+            $address,
+            $department,
+            $position,
+            $salary,
+            $hire_date
+        );
+        $stmt->execute();
+        $stmt->close();
+
+        header('Location: index.php');
+        exit;
+    }
+}
+
 $sql = 'SELECT * FROM employees ORDER BY full_name';
 $stmt = $conn->prepare($sql);
 $stmt->execute();
@@ -16,6 +53,7 @@ $employees = $stmt->get_result();
 <body>
 <div class="container">
     <h1>Учет сотрудников</h1>
+
     <div class="form-block">
         <h2>Новый сотрудник</h2>
         <form method="post">
@@ -64,6 +102,7 @@ $employees = $stmt->get_result();
             <button type="submit">Сохранить</button>
         </form>
     </div>
+
     <h2>Список сотрудников</h2>
     <table>
         <thead>
