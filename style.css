@@ -74,6 +74,24 @@ body {
     margin-bottom: 10px;
     border-radius: 3px;
   }
+  .errors summary {
+    cursor: pointer;
+    font-weight: bold;
+    list-style: none;
+  }
+  .errors summary::-webkit-details-marker {
+    display: none;
+  }
+  .errors summary::before {
+    content: "▾ ";
+  }
+  .errors[open] summary::before {
+    content: "▴ ";
+  }
+  .errors ul {
+    margin: 8px 0 0;
+    padding-left: 18px;
+  }
   tr.fired {
   background: #ffe6e6;
 }
