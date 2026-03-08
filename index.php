@@ -1,6 +1,8 @@
 <?php
 require_once 'db.php';
 
+$errors = [];
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
@@ -14,27 +16,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $salary     = trim($_POST['salary'] ?? '');
         $hire_date  = $_POST['hire_date'] ?? '';
 
-        $stmt = $conn->prepare(
-            'INSERT INTO employees (full_name, birth_date, passport, phone, address, department, position, salary, hire_date)
-             VALUES (?,?,?,?,?,?,?,?,?)'
-        );
-        $stmt->bind_param(
-            'sssssssss',
-            $full_name,
-            $birth_date,
-            $passport,
-            $phone,
-            $address,
-            $department,
-            $position,
-            $salary,
-            $hire_date
-        );
-        $stmt->execute();
-        $stmt->close();
+        if (
+            $full_name === '' || $birth_date === '' || $passport === '' || $phone === '' ||
+            $address === '' || $department === '' || $position === '' || $salary === '' || $hire_date === ''
+        ) {
+            $errors[] = 'Все поля обязательны для заполнения.';
+        } else {
+            if (!is_numeric($salary)) {
+                $errors[] = 'Зарплата должна быть числом.';
+            }
+            if (!preg_match('/^\d{10}$/', $passport)) {
+                $errors[] = 'Паспорт должен содержать 10 цифр (4 серии и 6 номера).';
+            }
+            if (!preg_match('/^[78]\d{10}$/', $phone)) {
+                $errors[] = 'Телефон должен быть в формате 8XXXXXXXXXX или 7XXXXXXXXXX.';
+            }
+        }
 
-        header('Location: index.php');
-        exit;
+        if (empty($errors)) {
+            $stmt = $conn->prepare(
+                'INSERT INTO employees (full_name, birth_date, passport, phone, address, department, position, salary, hire_date)
+                 VALUES (?,?,?,?,?,?,?,?,?)'
+            );
+            $stmt->bind_param(
+                'sssssssss',
+                $full_name,
+                $birth_date,
+                $passport,
+                $phone,
+                $address,
+                $department,
+                $position,
+                $salary,
+                $hire_date
+            );
+            $stmt->execute();
+            $stmt->close();
+
+            header('Location: index.php');
+            exit;
+        }
     }
 }
 
@@ -53,6 +74,14 @@ $employees = $stmt->get_result();
 <body>
 <div class="container">
     <h1>Учет сотрудников</h1>
+
+    <?php if (!empty($errors)): ?>
+        <div class="errors">
+            <?php foreach ($errors as $e): ?>
+                <div><?php echo htmlspecialchars($e); ?></div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
 
     <div class="form-block">
         <h2>Новый сотрудник</h2>
