@@ -60,6 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $filter_department = trim($_GET['filter_department'] ?? '');
 $filter_position   = trim($_GET['filter_position'] ?? '');
 $search_name       = trim($_GET['search_name'] ?? '');
+$filter_status = trim($_GET['filter_status'] ?? '');
 
 $where  = [];
 $params = [];
@@ -79,6 +80,17 @@ if ($search_name !== '') {
     $where[]  = 'full_name LIKE ?';
     $params[] = '%' . $search_name . '%';
     $types   .= 's';
+}
+if ($filter_status !== '') {
+    if ($filter_status === 'working') {
+        $where[] = 'is_fired = ?';
+        $params[] = 0;
+        $types .= 'i';
+    } elseif ($filter_status === 'fired') {
+        $where[] = 'is_fired = ?';
+        $params[] = 1;
+        $types .= 'i';
+    }
 }
 
 $sql = 'SELECT * FROM employees';
@@ -147,6 +159,14 @@ if ($is_post_save && !empty($errors)) {
             <div>
                 <label>Должность:</label>
                 <input type="text" name="filter_position" value="<?php echo htmlspecialchars($filter_position); ?>">
+            </div>
+            <div>
+                <label>Статус:</label>
+                <select name="filter_status">
+                    <option value="" <?php echo $filter_status === '' ? 'selected' : ''; ?>>Все</option>
+                    <option value="working" <?php echo $filter_status === 'working' ? 'selected' : ''; ?>>Работает</option>
+                    <option value="fired" <?php echo $filter_status === 'fired' ? 'selected' : ''; ?>>Уволен</option>
+                </select>
             </div>
             <div>
                 <label>Поиск по ФИО:</label>
