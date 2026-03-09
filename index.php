@@ -2,30 +2,32 @@
 require_once 'db.php';
 
 $errors = [];
+$success_message = '';
 $departments = ['IT', 'Бухгалтерия', 'Отдел продаж'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
     if ($action === 'save') {
-        $full_name  = trim($_POST['full_name'] ?? '');
+        $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+        $full_name = trim($_POST['full_name'] ?? '');
         $birth_date = $_POST['birth_date'] ?? '';
-        $passport   = trim($_POST['passport'] ?? '');
-        $phone      = trim($_POST['phone'] ?? '');
-        $address    = trim($_POST['address'] ?? '');
+        $passport = trim($_POST['passport'] ?? '');
+        $phone = trim($_POST['phone'] ?? '');
+        $address = trim($_POST['address'] ?? '');
         $department = trim($_POST['department'] ?? '');
-        $position   = trim($_POST['position'] ?? '');
-        $salary     = trim($_POST['salary'] ?? '');
-        $hire_date  = $_POST['hire_date'] ?? '';
+        $position = trim($_POST['position'] ?? '');
+        $salary = trim($_POST['salary'] ?? '');
+        $hire_date = $_POST['hire_date'] ?? '';
 
-        if ($full_name === '' || $birth_date === '' || $passport === '' || $phone === '' ||
-            $address === '' || $department === '' || $position === '' || $salary === '' || $hire_date === '') {
+        if ($full_name === '' || $birth_date === '' || $passport === '' || $phone === '' || $address === '' ||
+            $department === '' || $position === '' || $salary === '' || $hire_date === '') {
             $errors[] = 'Все поля обязательны для заполнения.';
         } else {
             if (!is_numeric($salary)) {
                 $errors[] = 'Зарплата должна быть числом.';
             }
             if (!preg_match('/^\d{10}$/', $passport)) {
-                $errors[] = 'Паспорт должен содержать 10 цифр (4 серии и 6 номера).';
+                $errors[] = 'Паспорт должен содержать 4 цифры серии и 6 цифр номера.';
             }
             if (!preg_match('/^[78]\d{10}$/', $phone)) {
                 $errors[] = 'Телефон должен быть в формате 8XXXXXXXXXX.';
@@ -33,15 +35,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if (empty($errors)) {
-            $stmt = $conn->prepare(
-                'INSERT INTO employees (full_name, birth_date, passport, phone, address, department, position, salary, hire_date)
-                 VALUES (?,?,?,?,?,?,?,?,?)'
-            );
-            $stmt->bind_param('sssssssss', $full_name, $birth_date, $passport, $phone, $address, $department, $position, $salary, $hire_date);
-            $stmt->execute();
-            $stmt->close();
-            header('Location: index.php');
-            exit;
+            if ($id > 0) {
+                $check = $conn->prepare('SELECT is_fired FROM employees WHERE id = ?');
+                $check->bind_param('i', $id);
+                $check->execute();
+                $res = $check->get_result();
+                $row = $res->fetch_assoc();
+                $check->close();
+                if ($row && (int)$row['is_fired'] === 1) {
+                    $errors[] = 'Нельзя редактировать уволенного сотрудника.';
+                } else {
+                    $stmt = $conn->prepare('UPDATE employees SET full_name=?, birth_date=?, passport=?, phone=?, address=?, department=?, position=?, salary=?, hire_date=? WHERE id=?');
+                    $stmt->bind_param(
+                        'sssssssssi',
+                        $full_name,
+                        $birth_date,
+                        $passport,
+                        $phone,
+                        $address,
+                        $department,
+                        $position,
+                        $salary,
+                        $hire_date,
+                        $id
+                    );
+                    $stmt->execute();
+                    $stmt->close();
+                    header('Location: index.php?status=updated');
+                    exit;
+                }
+            } else {
+                $stmt = $conn->prepare('INSERT INTO employees (full_name, birth_date, passport, phone, address, department, position, salary, hire_date) VALUES (?,?,?,?,?,?,?,?,?)');
+                $stmt->bind_param(
+                    'sssssssss',
+                    $full_name,
+                    $birth_date,
+                    $passport,
+                    $phone,
+                    $address,
+                    $department,
+                    $position,
+                    $salary,
+                    $hire_date
+                );
+                $stmt->execute();
+                $stmt->close();
+                header('Location: index.php?status=created');
+                exit;
+            }
         }
     } elseif ($action === 'fire') {
         $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
@@ -51,35 +92,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->bind_param('si', $today, $id);
             $stmt->execute();
             $stmt->close();
-            header('Location: index.php');
+            header('Location: index.php?status=fired');
             exit;
         }
     }
 }
 
+$status = $_GET['status'] ?? '';
+if ($status === 'created') {
+    $success_message = 'Сотрудник успешно добавлен.';
+} elseif ($status === 'updated') {
+    $success_message = 'Изменения по сотруднику сохранены.';
+} elseif ($status === 'fired') {
+    $success_message = 'Сотрудник успешно уволен.';
+}
+
 $filter_department = trim($_GET['filter_department'] ?? '');
-$filter_position   = trim($_GET['filter_position'] ?? '');
-$search_name       = trim($_GET['search_name'] ?? '');
+$filter_position = trim($_GET['filter_position'] ?? '');
+$search_name = trim($_GET['search_name'] ?? '');
 $filter_status = trim($_GET['filter_status'] ?? '');
 
-$where  = [];
+$where = [];
 $params = [];
-$types  = '';
+$types = '';
 
 if ($filter_department !== '') {
-    $where[]  = 'department = ?';
+    $where[] = 'department = ?';
     $params[] = $filter_department;
-    $types   .= 's';
+    $types .= 's';
 }
 if ($filter_position !== '') {
-    $where[]  = 'position = ?';
+    $where[] = 'position = ?';
     $params[] = $filter_position;
-    $types   .= 's';
-}
-if ($search_name !== '') {
-    $where[]  = 'full_name LIKE ?';
-    $params[] = '%' . $search_name . '%';
-    $types   .= 's';
+    $types .= 's';
 }
 if ($filter_status !== '') {
     if ($filter_status === 'working') {
@@ -91,6 +136,11 @@ if ($filter_status !== '') {
         $params[] = 1;
         $types .= 'i';
     }
+}
+if ($search_name !== '') {
+    $where[] = 'full_name LIKE ?';
+    $params[] = '%' . $search_name . '%';
+    $types .= 's';
 }
 
 $sql = 'SELECT * FROM employees';
@@ -106,22 +156,60 @@ if (!empty($params)) {
 $stmt->execute();
 $employees = $stmt->get_result();
 
-$is_post_save = $_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'save');
-$form_data = [
-    'full_name' => '', 'birth_date' => '', 'passport' => '', 'phone' => '', 'address' => '',
-    'department' => '', 'position' => '', 'salary' => '', 'hire_date' => '',
-];
-if ($is_post_save && !empty($errors)) {
-    $form_data['full_name']  = trim($_POST['full_name'] ?? '');
-    $form_data['birth_date'] = $_POST['birth_date'] ?? '';
-    $form_data['passport']   = trim($_POST['passport'] ?? '');
-    $form_data['phone']      = trim($_POST['phone'] ?? '');
-    $form_data['address']    = trim($_POST['address'] ?? '');
-    $form_data['department'] = trim($_POST['department'] ?? '');
-    $form_data['position']   = trim($_POST['position'] ?? '');
-    $form_data['salary']     = trim($_POST['salary'] ?? '');
-    $form_data['hire_date']  = $_POST['hire_date'] ?? '';
+$edit_id = isset($_GET['edit_id']) ? (int)$_GET['edit_id'] : 0;
+$edit_employee = null;
+$edit_locked = false;
+if ($edit_id > 0) {
+    $stmt2 = $conn->prepare('SELECT * FROM employees WHERE id = ?');
+    $stmt2->bind_param('i', $edit_id);
+    $stmt2->execute();
+    $res2 = $stmt2->get_result();
+    $edit_employee = $res2->fetch_assoc();
+    $stmt2->close();
+    if ($edit_employee && (int)$edit_employee['is_fired'] === 1) {
+        $edit_locked = true;
+    }
 }
+
+$is_post_save = $_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'save');
+
+$form_data = [
+    'id' => 0,
+    'full_name' => '',
+    'birth_date' => '',
+    'passport' => '',
+    'phone' => '',
+    'address' => '',
+    'department' => '',
+    'position' => '',
+    'salary' => '',
+    'hire_date' => '',
+];
+
+if ($is_post_save && !empty($errors)) {
+    $form_data['id'] = isset($_POST['id']) ? (int)$_POST['id'] : 0;
+    $form_data['full_name'] = trim($_POST['full_name'] ?? '');
+    $form_data['birth_date'] = $_POST['birth_date'] ?? '';
+    $form_data['passport'] = trim($_POST['passport'] ?? '');
+    $form_data['phone'] = trim($_POST['phone'] ?? '');
+    $form_data['address'] = trim($_POST['address'] ?? '');
+    $form_data['department'] = trim($_POST['department'] ?? '');
+    $form_data['position'] = trim($_POST['position'] ?? '');
+    $form_data['salary'] = trim($_POST['salary'] ?? '');
+    $form_data['hire_date'] = $_POST['hire_date'] ?? '';
+} elseif ($edit_employee) {
+    $form_data['id'] = (int)$edit_employee['id'];
+    $form_data['full_name'] = $edit_employee['full_name'];
+    $form_data['birth_date'] = $edit_employee['birth_date'];
+    $form_data['passport'] = $edit_employee['passport'];
+    $form_data['phone'] = $edit_employee['phone'];
+    $form_data['address'] = $edit_employee['address'];
+    $form_data['department'] = $edit_employee['department'];
+    $form_data['position'] = $edit_employee['position'];
+    $form_data['salary'] = rtrim(rtrim($edit_employee['salary'], '0'), '.');
+    $form_data['hire_date'] = $edit_employee['hire_date'];
+}
+
 ?>
 <!DOCTYPE html>
 <html lang="ru">
@@ -133,6 +221,10 @@ if ($is_post_save && !empty($errors)) {
 <body>
 <div class="container">
     <h1>Учет сотрудников</h1>
+
+    <?php if ($success_message): ?>
+        <div class="info"><?php echo htmlspecialchars($success_message); ?></div>
+    <?php endif; ?>
 
     <?php if (!empty($errors)): ?>
         <details class="errors" open>
@@ -152,7 +244,9 @@ if ($is_post_save && !empty($errors)) {
                 <select name="filter_department">
                     <option value="">Все</option>
                     <?php foreach ($departments as $dep): ?>
-                        <option value="<?php echo htmlspecialchars($dep); ?>" <?php echo $filter_department === $dep ? 'selected' : ''; ?>><?php echo htmlspecialchars($dep); ?></option>
+                        <option value="<?php echo htmlspecialchars($dep); ?>" <?php echo $filter_department === $dep ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($dep); ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -178,9 +272,13 @@ if ($is_post_save && !empty($errors)) {
     </div>
 
     <div class="form-block">
-        <h2>Новый сотрудник</h2>
-        <form method="post">
+        <h2><?php echo $edit_employee ? 'Редактирование сотрудника' : 'Новый сотрудник'; ?></h2>
+        <?php if ($edit_locked): ?>
+            <div class="info">Сотрудник уволен, редактирование недоступно.</div>
+        <?php else: ?>
+        <form method="post" id="employeeForm">
             <input type="hidden" name="action" value="save">
+            <input type="hidden" name="id" value="<?php echo (int)$form_data['id']; ?>">
             <div class="row">
                 <label>ФИО:</label>
                 <input type="text" name="full_name" required value="<?php echo htmlspecialchars($form_data['full_name']); ?>">
@@ -191,11 +289,20 @@ if ($is_post_save && !empty($errors)) {
             </div>
             <div class="row">
                 <label>Паспорт (серия/номер):</label>
-                <input type="text" name="passport" id="passport" required value="<?php echo htmlspecialchars($form_data['passport']); ?>">
+                <input
+                    type="text"
+                    name="passport"
+                    id="passport"
+                    required
+                    maxlength="10"
+                    pattern="\d{10}"
+                    title="Паспорт: 10 цифр подряд (4 серии и 6 номера)"
+                    value="<?php echo htmlspecialchars($form_data['passport']); ?>"
+                >
             </div>
             <div class="row">
                 <label>Телефон:</label>
-                <input type="tel" name="phone" id="phone" required placeholder="8XXXXXXXXXX" value="<?php echo htmlspecialchars($form_data['phone']); ?>">
+                <input type="tel" name="phone" id="phone" required pattern="[78]\d{10}" maxlength="11" placeholder="8XXXXXXXXXX" value="<?php echo htmlspecialchars($form_data['phone']); ?>">
             </div>
             <div class="row">
                 <label>Адрес:</label>
@@ -206,7 +313,9 @@ if ($is_post_save && !empty($errors)) {
                 <select name="department" required>
                     <option value="">Выберите отдел</option>
                     <?php foreach ($departments as $dep): ?>
-                        <option value="<?php echo htmlspecialchars($dep); ?>" <?php echo $form_data['department'] === $dep ? 'selected' : ''; ?>><?php echo htmlspecialchars($dep); ?></option>
+                        <option value="<?php echo htmlspecialchars($dep); ?>" <?php echo $form_data['department'] === $dep ? 'selected' : ''; ?>>
+                            <?php echo htmlspecialchars($dep); ?>
+                        </option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -223,7 +332,11 @@ if ($is_post_save && !empty($errors)) {
                 <input type="date" name="hire_date" required value="<?php echo htmlspecialchars($form_data['hire_date']); ?>">
             </div>
             <button type="submit">Сохранить</button>
+            <?php if ($edit_employee): ?>
+                <a href="index.php" class="reset-link">Отмена</a>
+            <?php endif; ?>
         </form>
+        <?php endif; ?>
     </div>
 
     <h2>Список сотрудников</h2>
@@ -253,15 +366,27 @@ if ($is_post_save && !empty($errors)) {
                 <td><?php echo htmlspecialchars($row['address']); ?></td>
                 <td><?php echo htmlspecialchars($row['department']); ?></td>
                 <td><?php echo htmlspecialchars($row['position']); ?></td>
-                <td><?php echo htmlspecialchars($row['salary']); ?></td>
-                <td><?php echo htmlspecialchars($row['hire_date']); ?></td>
-                <td><?php echo (int)$row['is_fired'] === 1 ? 'Уволен' : 'Работает'; ?></td>
                 <td>
+                    <?php
+                    $salaryValue = (float)$row['salary'];
+                    echo number_format($salaryValue, 0, '', ' ') . ' руб.';
+                    ?>
+                </td>
+                <td><?php echo htmlspecialchars($row['hire_date']); ?></td>
+                <td>
+                    <?php if ((int)$row['is_fired'] === 1): ?>
+                        Уволен
+                    <?php else: ?>
+                        Работает
+                    <?php endif; ?>
+                </td>
+                <td class="actions-cell">
+                    <a href="index.php?edit_id=<?php echo (int)$row['id']; ?>" class="btn btn-secondary">Редактировать</a>
                     <?php if ((int)$row['is_fired'] === 0): ?>
                         <form method="post" style="display:inline;">
                             <input type="hidden" name="action" value="fire">
                             <input type="hidden" name="id" value="<?php echo (int)$row['id']; ?>">
-                            <button type="submit">Уволить</button>
+                            <button type="submit" class="btn btn-danger" onclick="return confirm('Вы уверены, что хотите уволить сотрудника?');">Уволить</button>
                         </form>
                     <?php endif; ?>
                 </td>
@@ -271,10 +396,19 @@ if ($is_post_save && !empty($errors)) {
     </table>
 </div>
 <script>
-var phoneInput = document.getElementById('phone');
-if (phoneInput) phoneInput.addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 11); });
-var passportInput = document.getElementById('passport');
-if (passportInput) passportInput.addEventListener('input', function () { this.value = this.value.replace(/\D/g, '').slice(0, 10); });
+const phoneInput = document.getElementById('phone');
+if (phoneInput) {
+    phoneInput.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 11);
+    });
+}
+const passportInput = document.getElementById('passport');
+if (passportInput) {
+    passportInput.addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 10);
+    });
+}
 </script>
 </body>
 </html>
+
