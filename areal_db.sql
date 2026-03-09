@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Хост: 127.0.0.1:3306
--- Время создания: Мар 08 2026 г., 14:56
+-- Время создания: Мар 09 2026 г., 10:59
 -- Версия сервера: 8.0.30
 -- Версия PHP: 7.2.34
 
@@ -52,6 +52,15 @@ CREATE TABLE `employees` (
   `is_fired` tinyint(1) NOT NULL DEFAULT '0',
   `fired_at` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Дамп данных таблицы `employees`
+--
+
+INSERT INTO `employees` (`id`, `full_name`, `birth_date`, `passport`, `phone`, `address`, `department`, `position`, `salary`, `hire_date`, `is_fired`, `fired_at`) VALUES
+(1, 'Логинов Алексей Константинович', '2006-08-25', '7819111111', '89213721362', 'Бабича 17а', 'Отдел продаж', 'Маркетолог', '90000.00', '2026-01-01', 1, '2026-03-09'),
+(2, 'Проценко Сергей Владимирович', '2006-06-25', '7819218943', '89023128371', 'тутаевское шоссе 109', 'IT', 'Frontend', '120000.00', '2026-01-01', 0, NULL),
+(3, 'Стужин Андрей Ильич', '2026-03-14', '7820284128', '89732173621', 'Советская 57', 'IT', 'Главный бухгалтер', '100000.00', '2026-02-02', 0, NULL);
 
 -- --------------------------------------------------------
 
@@ -104,7 +113,7 @@ ALTER TABLE `departments`
 -- AUTO_INCREMENT для таблицы `employees`
 --
 ALTER TABLE `employees`
-  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT для таблицы `positions`
